@@ -1,14 +1,15 @@
 #include "scheduler.h"
 #include "comms.h"
+#include "protocol.h"
 
 void comms_task();
 void telemetry_task();
-void example_rcv_task();
+void command_task();
 
 task_t tasks[] = {
     {comms_task, 10, 0},
     {telemetry_task, 1000, 0},
-    {example_rcv_task, 1000, 0}
+    {command_task, 1000, 0}
 };
 
 const int num_tasks = sizeof(tasks) / sizeof(task_t);
@@ -32,20 +33,23 @@ void comms_task() {
     comms_poll();
 }
 
-void telemetry_task() {
-    comms_publish("rover/telemetry","hello from rover");
+void telemetry_task(){
+
+    uint8_t buffer[MAX_PACKET_SIZE];
+
+    int len = protocol_build_telemetry(buffer);
+
+    comms_publish_binary("rover/telemetry", buffer, len);
+
 }
 
-void example_rcv_task(){
-    char topic[64];
-    char payload[128];
+void command_task(){
 
-    if (comms_receive(topic, payload, sizeof(payload))) {
+    uint8_t buffer[MAX_PACKET_SIZE];
 
-        Serial.print("RX Topic: ");
-        Serial.println(topic);
-
-        Serial.print("RX Payload: ");
-        Serial.println(payload);
+    if(comms_receive(buffer, MAX_PACKET_SIZE))
+    {
+        protocol_parse_command(buffer, MAX_PACKET_SIZE);
     }
+
 }

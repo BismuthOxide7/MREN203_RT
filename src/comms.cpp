@@ -1,8 +1,5 @@
 #include "comms.h"
 
-
-
-
 const char  ssid[] = "Wire";
 const char  password[] = "12345678";
 
@@ -28,8 +25,7 @@ bool init_comms(){
         delay(5000);
     }
     mqttClient.connect(broker, port);
-    mqttClient.subscribe("rover/command"); //TODO: SETUP SUBS
-    mqttClient.subscribe("rover/config");
+    mqttClient.subscribe("rover/cmd"); //TODO: SETUP SUBS
     return 1;
 }
 
@@ -42,24 +38,20 @@ void comms_poll() {
     mqttClient.poll();
 }
 
-bool comms_receive(char* topic_buffer, char* payload_buffer, int max_len) {
+bool comms_receive(uint8_t* buffer, int max_len)
+{
 
     int messageSize = mqttClient.parseMessage();
 
-    if (messageSize <= 0) {
+    if(messageSize <= 0)
         return false;
-    }
-
-    // copy topic
-    strncpy(topic_buffer, mqttClient.messageTopic().c_str(), max_len);
 
     int i = 0;
 
-    while (mqttClient.available() && i < max_len - 1) {
-        payload_buffer[i++] = mqttClient.read();
+    while(mqttClient.available() && i < max_len)
+    {
+        buffer[i++] = mqttClient.read();
     }
-
-    payload_buffer[i] = '\0';
 
     return true;
 }
@@ -68,5 +60,20 @@ bool comms_publish(const char* topic, const char* msg){
     mqttClient.beginMessage(topic);
     mqttClient.print(msg);
     mqttClient.endMessage();
+    return true;
+}
+
+bool comms_publish_binary(const char* topic, uint8_t* data, int len)
+{
+
+    if(!mqttClient.connected())
+        return false;
+
+    mqttClient.beginMessage(topic);
+
+    mqttClient.write(data, len);
+
+    mqttClient.endMessage();
+
     return true;
 }
